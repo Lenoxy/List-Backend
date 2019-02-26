@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "pretty": true,
+    "noImplicitAny": false,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "outDir": "./dist",
+    "baseUrl": "src",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": [
+    "src/**/*"
+  ]
+}
