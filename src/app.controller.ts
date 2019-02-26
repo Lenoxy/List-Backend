@@ -11,7 +11,6 @@ export class AppController {
 
     @Post('/login')
     login(user: String, password: String): String {
-
         return this.listService.login(user, password);
     }
 
