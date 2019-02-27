@@ -1,27 +1,25 @@
 import {TokenGenerator} from "ts-token-generator";
-import {Connection, ConnectionManager} from "typeorm";
+import {Connection, createConnection} from "typeorm";
 import {Answer} from "./answer";
 
-// @Injectable()
 export class ListService {
     private connection: Connection = null;
 
     async connectDatabase(): Promise<void> {
-        let connection: Connection;
-        const connectionManager = new ConnectionManager();
-        this.connection = await connectionManager.create({
+        this.connection = await createConnection({
             type: "mysql",
             host: "localhost",
             port: 3306,
             username: "root",
             password: "",
-            database: "list"
+            database: "list",
+            entities: ["./entity/*.ts"]
         });
-        connection.connect().then(() => {
+        if (this.connection.isConnected) {
             console.log('Database connected');
-        }, () => {
+        } else {
             console.error('Database connection error');
-        });
+        }
     }
 
 
@@ -47,7 +45,7 @@ export class ListService {
         }
 
         if (answer.getSuccess() === true) {
-
+            //TODO Database comparison
         }
 
 
