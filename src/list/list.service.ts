@@ -1,6 +1,7 @@
 import {TokenGenerator} from "ts-token-generator";
 import {Connection, createConnection} from "typeorm";
 import {Answer} from "./answer";
+import {Users} from "../entity/users";
 
 export class ListService {
     private connection: Connection = null;
@@ -28,26 +29,20 @@ export class ListService {
         return tokgen.generate();
     }
 
-    login(user: String, password: String): Answer {
+    login(givenEmail: String, password: String): Answer {
         let answer: Answer;
 
-        //Validation
-        if (user.length <= 4) {
-            answer.setReason('Please enter a name with at least four characters.');
-            answer.setSuccess(false);
-        }
-        if (password.length <= 6) {
-            if (answer.getSuccess() === false) {
-                answer.setReason('Please enter a name with at least four characters and a Password with at least six characters.');
-            }
-            answer.setSuccess(false);
-            answer.setReason('Please enter a Password with at least six characters.');
-        }
+        //Validation!!
 
-        if (answer.getSuccess() === true) {
-            //TODO Database comparison
-        }
+        const dbUser: Promise<Users> = this.connection.getRepository(Users).createQueryBuilder("mail")
+            .where("mail.email = :email", {email: givenEmail}).getOne();
+        console.log(dbUser);
 
+        dbUser.then(user => {
+            console.log(user);
+        }, err => {
+            console.log(err);
+        });
 
         return answer;
     }

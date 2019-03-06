@@ -11,8 +11,8 @@ export class AppController {
     }
 
     @Post('/login')
-    login(user: String, password: String): object {
-        const loginStatus = this.listService.login(user, password);
+    login(givenEmail: String, password: String): object {
+        const loginStatus = this.listService.login(givenEmail, password);
 
         return loginStatus;
     }
