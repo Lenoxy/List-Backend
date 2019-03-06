@@ -11,8 +11,9 @@ export class AppController {
     }
 
     @Post('/login')
-    login(givenEmail: String, password: String): object {
-        const loginStatus = this.listService.login(givenEmail, password);
+    async login(email: String, password: String) {
+        email = "lenoxy@gmx.ch";
+        const loginStatus = await this.listService.login(email, password);
 
         return loginStatus;
     }

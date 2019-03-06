@@ -14,7 +14,7 @@ export class ListService {
             username: "root",
             password: "",
             database: "list",
-            entities: ["./entity/*.ts"]
+            entities: [Users]
         });
         if (this.connection.isConnected) {
             console.log('Database connected');
@@ -29,21 +29,26 @@ export class ListService {
         return tokgen.generate();
     }
 
-    login(givenEmail: String, password: String): Answer {
-        let answer: Answer;
+    login(givenEmail: String, password: String) {
+        let answer: Answer = new Answer();
 
         //Validation!!
 
         const dbUser: Promise<Users> = this.connection.getRepository(Users).createQueryBuilder("mail")
             .where("mail.email = :email", {email: givenEmail}).getOne();
-        console.log(dbUser);
 
-        dbUser.then(user => {
-            console.log(user);
-        }, err => {
-            console.log(err);
+        console.log("givenEmail: " + givenEmail);
+
+        dbUser.then(usr => {
+            console.log("user: " + usr);
+            answer.setSuccess(usr.password === password);
+
+            answer.setSuccess(true);
+
+            answer.setToken(this.tokenGenerator());
+
+            console.log('[Login] Email fetched: ' + dbUser);
+            return answer;
         });
-
-        return answer;
     }
 }
