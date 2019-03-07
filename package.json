@@ -19,6 +19,7 @@
     "@types/pg": "^7.4.13",
     "class-transformer": "^0.1.7",
     "class-validator": "^0.8.1",
+    "cors": "^2.8.5",
     "mysql": "^2.16.0",
     "pg": "^7.8.1",
     "reflect-metadata": "^0.1.13",

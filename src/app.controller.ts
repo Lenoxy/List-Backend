@@ -1,5 +1,6 @@
 import {Controller, Post} from "@nestjs/common";
 import {ListService} from "./list/list.service";
+import {Answer} from "./list/answer";
 
 @Controller('')
 export class AppController {
@@ -15,6 +16,8 @@ export class AppController {
         email = "lenoxy@gmx.ch";
         const loginStatus = await this.listService.login(email, password);
 
-        return loginStatus;
+        return new Answer();
+
+        // return loginStatus;
     }
 }
