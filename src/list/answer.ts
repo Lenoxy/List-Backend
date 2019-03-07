@@ -1,30 +1,30 @@
 export class Answer {
     private success: boolean = null;
-    private reason: string = null;
+    private reason: any = null //TODO enum
     private token: string = null;
 
-    public getSuccess() {
+
+    public getSuccess(): boolean {
         return this.success;
     }
 
-    public setSuccess(success) {
-        success = this.success;
+    public setSuccess(success): void {
+        this.success = success;
     }
 
-    public getReason() {
+    public getReason(): any { //TODO
         return this.reason;
     }
 
-    public setReason(reason) {
-        reason = this.reason;
+    public setReason(reason): void {
+        this.reason = reason;
     }
 
-    public getToken() {
+    public getToken(): string {
         return this.token;
     }
 
-    public setToken(token) {
-        token = this.token;
+    public setToken(token): void {
+        this.token = token;
     }
-
 }

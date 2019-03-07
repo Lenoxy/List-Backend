@@ -1,54 +1,61 @@
 import {TokenGenerator} from "ts-token-generator";
 import {Connection, createConnection} from "typeorm";
 import {Answer} from "./answer";
-import {Users} from "../entity/users";
+import {User} from "../entity/user";
+import loginData from "./connection.json";
 
 export class ListService {
     private connection: Connection = null;
 
     async connectDatabase(): Promise<void> {
-        this.connection = await createConnection({
-            type: "mysql",
-            host: "localhost",
-            port: 3306,
-            username: "root",
-            password: "",
-            database: "list",
-            entities: [Users]
-        });
+        this.connection = await createConnection(
+            {
+                "type": "mysql",
+                "host": "localhost",
+                "port": 3306,
+                "username": "root",
+                "password": "",
+                "database": "list",
+                "entities": [User]
+            }
+        );
         if (this.connection.isConnected) {
-            console.log('Database connected');
+            console.log('[Database] connected on ' + loginData.host + ':' + loginData.port + ' on ' + loginData.database);
         } else {
-            console.error('Database connection error');
+            console.error('[Database] connection error on ' + loginData.host + ':' + loginData.port + ' on ' + loginData.database);
         }
     }
-
 
     tokenGenerator(): String {
         const tokgen = new TokenGenerator();
         return tokgen.generate();
     }
 
-    login(givenEmail: String, password: String) {
+    login(givenEmail: String, password: String): Answer {
         let answer: Answer = new Answer();
 
         //Validation!!
 
-        const dbUser: Promise<Users> = this.connection.getRepository(Users).createQueryBuilder("mail")
+        const dbUser: Promise<User> = this.connection.getRepository(User).createQueryBuilder("mail")
             .where("mail.email = :email", {email: givenEmail}).getOne();
 
-        console.log("givenEmail: " + givenEmail);
+        dbUser.then((usr) => {
+            console.log("[Login] User: ", usr.email);
 
-        dbUser.then(usr => {
-            console.log("user: " + usr);
-            answer.setSuccess(usr.password === password);
+            if (usr.password === password) {
+                answer.setSuccess(true);
+                answer.setToken(this.tokenGenerator());
+            } else {
+                answer.setSuccess(false);
+                answer.setReason('Password does not match for given User.');
+            }
 
-            answer.setSuccess(true);
-
-            answer.setToken(this.tokenGenerator());
-
-            console.log('[Login] Email fetched: ' + dbUser);
-            return answer;
+        }).catch((usr) => {
+            console.error("[Login] Could not fetch data from database.");
+            answer.setSuccess(false);
+            answer.setReason('Could not fetch Data from Database.')
         });
+
+        return answer;
     }
 }

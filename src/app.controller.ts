@@ -1,6 +1,6 @@
-import {Controller, Post} from "@nestjs/common";
+import {Body, Controller, Post} from "@nestjs/common";
 import {ListService} from "./list/list.service";
-import {Answer} from "./list/answer";
+import {userLogin} from "./entity/user-login";
 
 @Controller('')
 export class AppController {
@@ -12,12 +12,7 @@ export class AppController {
     }
 
     @Post('/login')
-    async login(email: String, password: String) {
-        email = "lenoxy@gmx.ch";
-        const loginStatus = await this.listService.login(email, password);
-
-        return new Answer();
-
-        // return loginStatus;
+    async login(@Body() body: userLogin) {
+        return await JSON.stringify(this.listService.login(body.email, body.password));
     }
 }
