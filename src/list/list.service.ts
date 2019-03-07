@@ -3,6 +3,7 @@ import {Connection, createConnection} from "typeorm";
 import {Answer} from "./answer";
 import {User} from "../entity/user";
 import loginData from "./connection.json";
+import {getConnection} from "typeorm/browser";
 
 export class ListService {
     private connection: Connection = null;
@@ -34,7 +35,7 @@ export class ListService {
     login(givenEmail: String, password: String): Answer {
         let answer: Answer = new Answer();
 
-        //Validation!!
+        //TODO: Validate user input
 
         const dbUser: Promise<User> = this.connection.getRepository(User).createQueryBuilder("mail")
             .where("mail.email = :email", {email: givenEmail}).getOne();
@@ -58,4 +59,23 @@ export class ListService {
 
         return answer;
     }
+
+    register(email: string, username: string, password: string, repeatPassword: string) {
+
+        //TODO: Validate user input
+
+        getConnection()
+            .createQueryBuilder()
+            .insert()
+            .into(User)
+            .values([
+                {email: email, username: username, password: password, current_token: this.tokenGenerator()}
+            ])
+            .execute();
+        //TODO: Promise return .execute()?
+
+
+    }
+
+
 }
