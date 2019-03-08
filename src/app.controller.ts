@@ -1,7 +1,7 @@
 import {Body, Controller, Post} from "@nestjs/common";
 import {ListService} from "./list/list.service";
-import {userLogin} from "./entity/user-login";
-import {userRegister} from "./entity/user-register";
+import {userLogin} from "./interface/user-login";
+import {userRegister} from "./interface/user-register";
 
 @Controller('')
 export class AppController {
@@ -21,5 +21,4 @@ export class AppController {
     async register(@Body() body: userRegister) {
         return this.listService.register(body.email, body.username, body.password, body.repeatPassword);
     }
-
 }

@@ -4,5 +4,8 @@
   "port": 3306,
   "username": "root",
   "password": "",
-  "database": "list"
+  "database": "list",
+  "entities": [
+    "dist/entity/*"
+  ]
 }

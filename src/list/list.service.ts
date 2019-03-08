@@ -1,9 +1,9 @@
 import {TokenGenerator} from "ts-token-generator";
-import {Connection, createConnection} from "typeorm";
-import {Answer} from "./answer";
+import {Connection, createConnection, getConnection} from "typeorm";
+import {LoginAnswer} from "../interface/loginAnswer";
+import {RegisterAnswer} from "../interface/registerAnswer";
 import {User} from "../entity/user";
-import loginData from "./connection.json";
-import {getConnection} from "typeorm/browser";
+import {validation} from "../interface/validation"
 
 export class ListService {
     private connection: Connection = null;
@@ -21,9 +21,10 @@ export class ListService {
             }
         );
         if (this.connection.isConnected) {
-            console.log('[Database] connected on ' + loginData.host + ':' + loginData.port + ' on ' + loginData.database);
+            //TODO: Variabeln nicht hardcodieren.
+            console.log('[Database] connected on ...');
         } else {
-            console.error('[Database] connection error on ' + loginData.host + ':' + loginData.port + ' on ' + loginData.database);
+            console.error('[Database] connection error on ...');
         }
     }
 
@@ -32,8 +33,62 @@ export class ListService {
         return tokgen.generate();
     }
 
-    login(givenEmail: String, password: String): Answer {
-        let answer: Answer = new Answer();
+    validate(type: validation, string: String, password?: String): String {
+        string.trim();
+
+        switch (type) {
+            case validation.email:
+                //TODO: Code leserlicher machen!
+                //
+                string.toLowerCase();
+                let splittedat: String[] = string.split('@');
+                let splitteddot: String[] = splittedat[1].split('.');
+                if (splittedat[0].length >= 2) {
+                    if (splitteddot[0].length >= 2) {
+                        if (splitteddot[1].length >= 2) {
+
+                        } else {
+                            string = null
+                        }
+                    } else {
+                        string = null
+                    }
+                } else {
+                    string = null
+                }
+
+
+                break;
+
+
+            case validation.username:
+                string.toLowerCase();
+
+                break;
+
+
+            case validation.password:
+
+
+                break;
+
+            case validation.repeatPassword:
+                if (password == null) {
+                    console.error('[Validaion] To Validate', type, 'please add the parameter password.')
+                } else {
+                    if (string !== password) {
+                        string = null;
+                    }
+                }
+                break;
+        }
+
+        return string
+    }
+
+
+    login(givenEmail: String, password: String): LoginAnswer {
+        let answer: LoginAnswer = new LoginAnswer();
 
         //TODO: Validate user input
 
@@ -44,25 +99,29 @@ export class ListService {
             console.log("[Login] User: ", usr.email);
 
             if (usr.password === password) {
-                answer.setSuccess(true);
-                answer.setToken(this.tokenGenerator());
+                answer.success = true;
+                answer.token = this.tokenGenerator();
             } else {
-                answer.setSuccess(false);
-                answer.setReason('Password does not match for given User.');
+                answer.success = false;
+                answer.reason = 'Password does not match for given User.';
             }
 
         }).catch((usr) => {
             console.error("[Login] Could not fetch data from database.");
-            answer.setSuccess(false);
-            answer.setReason('Could not fetch Data from Database.')
+            answer.success = false;
+            answer.reason = 'Could not fetch Data from Database.';
         });
 
         return answer;
     }
 
     register(email: string, username: string, password: string, repeatPassword: string) {
+        let answer: RegisterAnswer = new RegisterAnswer();
 
-        //TODO: Validate user input
+        this.validate(validation.email, email);
+
+
+        console.log('[Register] Registration recieved:', email, username, password, repeatPassword);
 
         getConnection()
             .createQueryBuilder()
@@ -75,6 +134,7 @@ export class ListService {
         //TODO: Promise return .execute()?
 
 
+        return answer;
     }
 
 
