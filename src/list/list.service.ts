@@ -3,7 +3,6 @@ import {Connection, createConnection, getConnection} from "typeorm";
 import {LoginAnswer} from "../interface/loginAnswer";
 import {RegisterAnswer} from "../interface/registerAnswer";
 import {User} from "../entity/user";
-import {validation} from "../interface/validation"
 
 export class ListService {
     private connection: Connection = null;
@@ -33,57 +32,34 @@ export class ListService {
         return tokgen.generate();
     }
 
-    validate(type: validation, string: String, password?: String): String {
-        string.trim();
+    validateEmail(email: String): boolean {
+        email.trim().toLowerCase();
+        try {
+            //Explaining this next piece of code:
+            //splittedat takes a Email adress and splits for example user@provider.org into "user" and "provider.org".
+            let splittedat: String[] = email.split('@');
+            //splitteddot takes the output of the first splitter "provider.org" and splits it into "provider" and "org".
+            let splitteddot: String[] = splittedat[1].split('.');
+            //Checking if these texts aren't too long
 
-        switch (type) {
-            case validation.email:
-                //TODO: Code leserlicher machen!
-                //
-                string.toLowerCase();
-                let splittedat: String[] = string.split('@');
-                let splitteddot: String[] = splittedat[1].split('.');
-                if (splittedat[0].length >= 2) {
-                    if (splitteddot[0].length >= 2) {
-                        if (splitteddot[1].length >= 2) {
+            return (splittedat[0].length >= 2 && splitteddot[0].length >= 2 && splitteddot[1].length >= 2);
 
-                        } else {
-                            string = null
-                        }
-                    } else {
-                        string = null
-                    }
-                } else {
-                    string = null
-                }
-
-
-                break;
-
-
-            case validation.username:
-                string.toLowerCase();
-
-                break;
-
-
-            case validation.password:
-
-
-                break;
-
-            case validation.repeatPassword:
-                if (password == null) {
-                    console.error('[Validaion] To Validate', type, 'please add the parameter password.')
-                } else {
-                    if (string !== password) {
-                        string = null;
-                    }
-                }
-                break;
+        } catch {
+            return false;
         }
+    }
 
-        return string
+    validateUsername(username: String): boolean {
+        return (username.length >= 3);
+    }
+
+    validatePassword(password: String, repeatPassword?: String) {
+        if (repeatPassword == null) {
+            //TODO: Mindestens ein Grossbuchstabe
+            return (password.length >= 6);
+        } else {
+            return (password.length >= 6 && password === repeatPassword);
+        }
     }
 
 
@@ -117,12 +93,16 @@ export class ListService {
 
     register(email: string, username: string, password: string, repeatPassword: string) {
         let answer: RegisterAnswer = new RegisterAnswer();
-
-        this.validate(validation.email, email);
-
-
         console.log('[Register] Registration recieved:', email, username, password, repeatPassword);
 
+        answer.validateReason = [this.validateEmail(email), this.validateUsername(username), this.validatePassword(password, repeatPassword)];
+        console.log(
+            '[Validation] Success: (' +
+            'Email:', answer.validateReason[0],
+            'Username:', answer.validateReason[1],
+            'Password:', answer.validateReason[2] +
+            ')'
+        );
         getConnection()
             .createQueryBuilder()
             .insert()
@@ -133,9 +113,6 @@ export class ListService {
             .execute();
         //TODO: Promise return .execute()?
 
-
         return answer;
     }
-
-
 }
