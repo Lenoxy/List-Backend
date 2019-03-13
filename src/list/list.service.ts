@@ -1,8 +1,9 @@
 import {TokenGenerator} from "ts-token-generator";
 import {Connection, createConnection, getConnection} from "typeorm";
-import {LoginAnswer} from "../interface/loginAnswer";
-import {RegisterAnswer} from "../interface/registerAnswer";
+import {Answer} from "../interface/answer";
 import {User} from "../entity/user";
+import * as connData from '../../ormconfig.json';
+
 
 export class ListService {
     private connection: Connection = null;
@@ -11,19 +12,18 @@ export class ListService {
         this.connection = await createConnection(
             {
                 "type": "mysql",
-                "host": "localhost",
-                "port": 3306,
-                "username": "root",
-                "password": "",
-                "database": "list",
+                "host": connData.host,
+                "port": connData.port,
+                "username": connData.username,
+                "password": connData.password,
+                "database": connData.database,
                 "entities": [User]
             }
         );
         if (this.connection.isConnected) {
-            //TODO: Variabeln nicht hardcodieren.
-            console.log('[Database] connected on ...');
+            console.log('[Database] connected on', connData.host + ':' + connData.port);
         } else {
-            console.error('[Database] connection error on ...');
+            console.error('[Database] connection error on', connData.host + ':' + connData.port);
         }
     }
 
@@ -35,14 +35,13 @@ export class ListService {
     validateEmail(email: String): boolean {
         email.trim().toLowerCase();
         try {
-            //Explaining this next piece of code:
             //splittedat takes a Email adress and splits for example user@provider.org into "user" and "provider.org".
             let splittedat: String[] = email.split('@');
             //splitteddot takes the output of the first splitter "provider.org" and splits it into "provider" and "org".
             let splitteddot: String[] = splittedat[1].split('.');
             //Checking if these texts aren't too long
 
-            return (splittedat[0].length >= 2 && splitteddot[0].length >= 2 && splitteddot[1].length >= 2);
+            return splittedat[0].length >= 2 && splitteddot[0].length >= 2 && splitteddot[1].length >= 2;
 
         } catch {
             return false;
@@ -50,7 +49,7 @@ export class ListService {
     }
 
     validateUsername(username: String): boolean {
-        return (username.length >= 3);
+        return username.length >= 3;
     }
 
     validatePassword(password: String, repeatPassword?: String) {
@@ -58,60 +57,91 @@ export class ListService {
             //TODO: Mindestens ein Grossbuchstabe
             return (password.length >= 6);
         } else {
-            return (password.length >= 6 && password === repeatPassword);
+            return password.length >= 6 && password === repeatPassword;
         }
     }
 
 
-    login(givenEmail: String, password: String): LoginAnswer {
-        let answer: LoginAnswer = new LoginAnswer();
+    login(email: String, password: String): Answer {
+        let answer: Answer = new Answer();
 
-        //TODO: Validate user input
 
-        const dbUser: Promise<User> = this.connection.getRepository(User).createQueryBuilder("mail")
-            .where("mail.email = :email", {email: givenEmail}).getOne();
+        if (this.validateEmail(email)) {
+            answer.validation[0] = true;
+            if (this.validatePassword(password)) {
+                answer.validation[1] = true;
 
-        dbUser.then((usr) => {
-            console.log("[Login] User: ", usr.email);
+                const dbUser: Promise<User> = this.connection.getRepository(User).createQueryBuilder("mail")
+                    .where("mail.email = :email", {email: email}).getOne();
 
-            if (usr.password === password) {
-                answer.success = true;
-                answer.token = this.tokenGenerator();
+                dbUser.then((usr) => {
+
+                    if (password === usr.password) {
+                        console.log('[Login]', email, 'logged in successfully');
+                        answer.isPasswordCorrect = true;
+                        answer.token = this.tokenGenerator();
+
+                    } else {
+                        console.log('[Login] Wrong password for user', email);
+                        answer.isPasswordCorrect = false;
+
+                    }
+
+                }).catch((err) => {
+                    console.error("[Login] Could not find matching data for", email);
+                    answer.internalError = 1;
+                });
+
+
             } else {
-                answer.success = false;
-                answer.reason = 'Password does not match for given User.';
+                answer.validation[1] = false;
+                console.log('[Login] Password', password, 'is not valid');
             }
-
-        }).catch((usr) => {
-            console.error("[Login] Could not fetch data from database.");
-            answer.success = false;
-            answer.reason = 'Could not fetch Data from Database.';
-        });
+        } else {
+            answer.validation[0] = false;
+            console.log('[Login] Email', email, 'is not valid');
+        }
 
         return answer;
     }
 
     register(email: string, username: string, password: string, repeatPassword: string) {
-        let answer: RegisterAnswer = new RegisterAnswer();
+        let answer: Answer = new Answer();
         console.log('[Register] Registration recieved:', email, username, password, repeatPassword);
 
-        answer.validateReason = [this.validateEmail(email), this.validateUsername(username), this.validatePassword(password, repeatPassword)];
+        answer.validation = [this.validateEmail(email), this.validateUsername(username), this.validatePassword(password, repeatPassword)];
         console.log(
             '[Validation] Success: (' +
-            'Email:', answer.validateReason[0],
-            'Username:', answer.validateReason[1],
-            'Password:', answer.validateReason[2] +
+            'Email:', answer.validation[0],
+            'Username:', answer.validation[1],
+            'Password:', answer.validation[2] +
             ')'
         );
-        getConnection()
-            .createQueryBuilder()
-            .insert()
-            .into(User)
-            .values([
-                {email: email, username: username, password: password, current_token: this.tokenGenerator()}
-            ])
-            .execute();
-        //TODO: Promise return .execute()?
+
+        if (answer.validation[0] == true && answer.validation[1] == true && answer.validation[2] == true) {
+            try {
+
+
+                getConnection()
+                    .createQueryBuilder()
+                    .insert()
+                    .into(User)
+                    .values([
+                        {email: email, username: username, password: password, current_token: this.tokenGenerator()}
+                    ])
+                    .execute();
+                //TODO: Promise return .execute()?
+
+                answer.token = this.tokenGenerator();
+
+                console.log('[Register] Register for', email, 'completed successfully');
+            } catch {
+                console.error('[Register] Error while inserting data to database');
+                answer.internalError = 1;
+            }
+
+        }
+
 
         return answer;
     }
