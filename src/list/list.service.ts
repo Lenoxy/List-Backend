@@ -141,8 +141,6 @@ export class ListService {
             }
 
         }
-
-
         return answer;
     }
 }
