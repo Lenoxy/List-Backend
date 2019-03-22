@@ -4,9 +4,9 @@ import {Answer} from "../interface/answer";
 import {User} from "../entity/user";
 import * as connData from '../../ormconfig.json';
 
-
 export class ListService {
     private connection: Connection = null;
+
 
     async connectDatabase(): Promise<void> {
         this.connection = await createConnection(
@@ -52,94 +52,106 @@ export class ListService {
         return username.length >= 3;
     }
 
-    validatePassword(password: String, repeatPassword?: String) {
+    validatePassword(password: String, repeatPassword?: String): boolean {
         if (repeatPassword == null) {
-            //TODO: Mindestens ein Grossbuchstabe
             return (password.length >= 6);
         } else {
             return password.length >= 6 && password === repeatPassword;
         }
     }
 
+    login(email: String, password: String): Promise<Answer> {
+        return new Promise((res, rej) => {
+            let answer: Answer = new Answer();
 
-    login(email: String, password: String): Answer {
-        let answer: Answer = new Answer();
+            answer.validation.email = this.validateEmail(email);
+            answer.validation.password = this.validatePassword(password);
 
+            if (!answer.validation.email || !answer.validation.password) {
+                rej(answer);
+            }
 
-        if (this.validateEmail(email)) {
-            answer.validation[0] = true;
-            if (this.validatePassword(password)) {
-                answer.validation[1] = true;
-
-                const dbUser: Promise<User> = this.connection.getRepository(User).createQueryBuilder("mail")
-                    .where("mail.email = :email", {email: email}).getOne();
-
-                dbUser.then((usr) => {
-
+            this.connection.getRepository(User)
+                .createQueryBuilder("mail")
+                .where("mail.email = :email", {email: email})
+                .getOne()
+                .then((usr: User) => {
                     if (password === usr.password) {
-                        console.log('[Login]', email, 'logged in successfully');
-                        answer.isPasswordCorrect = true;
+                        console.log('[Login]', email, 'logged in successfully', usr);
                         answer.token = this.tokenGenerator();
 
                     } else {
                         console.log('[Login] Wrong password for user', email);
-                        answer.isPasswordCorrect = false;
+                        answer.code = 101;
 
                     }
-
+                    console.log('ListService:login:answer:', answer);
+                    res(answer);
                 }).catch((err) => {
-                    console.error("[Login] Could not find matching data for", email);
-                    answer.internalError = 1;
-                });
-
-
-            } else {
-                answer.validation[1] = false;
-                console.log('[Login] Password', password, 'is not valid');
-            }
-        } else {
-            answer.validation[0] = false;
-            console.log('[Login] Email', email, 'is not valid');
-        }
-
-        return answer;
+                console.error("[Login] Could not find matching data for", email);
+                answer.code = 2;
+                rej(answer);
+            });
+        });
     }
 
     register(email: string, username: string, password: string, repeatPassword: string) {
         let answer: Answer = new Answer();
         console.log('[Register] Registration recieved:', email, username, password, repeatPassword);
 
-        answer.validation = [this.validateEmail(email), this.validateUsername(username), this.validatePassword(password, repeatPassword)];
+        answer.validation = {
+            email: this.validateEmail(email),
+            username: this.validateUsername(username),
+            password: this.validatePassword(password, repeatPassword)
+        };
         console.log(
-            '[Validation] Success: (' +
-            'Email:', answer.validation[0],
-            'Username:', answer.validation[1],
-            'Password:', answer.validation[2] +
-            ')'
+            '[Validation] Result:',
+            'Email:', answer.validation.email,
+            'Username:', answer.validation.username,
+            'Password:', answer.validation.password
         );
 
-        if (answer.validation[0] == true && answer.validation[1] == true && answer.validation[2] == true) {
-            try {
+        if (answer.validation.email == true && answer.validation.username == true && answer.validation.password == true) {
 
+            const dbUser: Promise<User> =
+                this.connection
+                    .getRepository(User)
+                    .createQueryBuilder("mail")
+                    .where("mail.email = :email", {email: email})
+                    .getOne();
 
-                getConnection()
-                    .createQueryBuilder()
-                    .insert()
-                    .into(User)
-                    .values([
-                        {email: email, username: username, password: password, current_token: this.tokenGenerator()}
-                    ])
-                    .execute();
-                //TODO: Promise return .execute()?
+            dbUser.then((usr) => {
+                if (email === usr.email) {
+                    console.log('[Register]', email, 'already registered');
+                    answer.code = 2;
+                }
+            }).catch((err) => {
+                console.log("[Register] Email not yet registered: ", email);
+                try {
 
-                answer.token = this.tokenGenerator();
+                    getConnection()
+                        .createQueryBuilder()
+                        .insert()
+                        .into(User)
+                        .values([
+                            {
+                                email: email,
+                                username: username,
+                                password: password,
+                                current_token: this.tokenGenerator()
+                            }
+                        ])
+                        .execute();
+                    //TODO: Promise return .execute()?
 
-                console.log('[Register] Register for', email, 'completed successfully');
-            } catch {
-                console.error('[Register] Error while inserting data to database');
-                answer.internalError = 1;
-            }
+                    answer.token = this.tokenGenerator();
 
+                    console.log('[Register] Register for', email, 'completed successfully');
+                } catch {
+                    console.error('[Register] Error while inserting data to database');
+                    answer.code = 1;
+                }
+            });
         }
         return answer;
     }

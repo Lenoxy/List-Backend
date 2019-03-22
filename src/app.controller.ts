@@ -14,7 +14,7 @@ export class AppController {
 
     @Post('/login')
     async login(@Body() body: userLogin) {
-        return await JSON.stringify(this.listService.login(body.email, body.password));
+        return await this.listService.login(body.email, body.password);
     }
 
     @Post('/register')
