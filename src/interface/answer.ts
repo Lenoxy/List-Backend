@@ -21,8 +21,10 @@ enum successCode {
 
     //LOGIN
     wrongPassword = 101,
+    emailNotExisting = 102,
 
     //REGISTER
     emailExists = 201,
+    passwordsDontMatch = 202,
 
 }
