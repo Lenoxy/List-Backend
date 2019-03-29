@@ -9,21 +9,26 @@ export class ListService {
 
 
     async connectDatabase(): Promise<void> {
-        this.connection = await createConnection(
-            {
-                "type": "mysql",
-                "host": connData.host,
-                "port": connData.port,
-                "username": connData.username,
-                "password": connData.password,
-                "database": connData.database,
-                "entities": [User]
+        try {
+            this.connection = await createConnection(
+                {
+                    "type": "mysql",
+                    "host": connData.host,
+                    "port": connData.port,
+                    "username": connData.username,
+                    "password": connData.password,
+                    "database": connData.database,
+                    "entities": [User]
+                }
+            );
+
+            if (this.connection.isConnected) {
+                console.log('[Database] connected on', connData.host + ':' + connData.port);
+            } else {
+                console.error('[Database] connection error on', connData.host + ':' + connData.port);
             }
-        );
-        if (this.connection.isConnected) {
-            console.log('[Database] connected on', connData.host + ':' + connData.port);
-        } else {
-            console.error('[Database] connection error on', connData.host + ':' + connData.port);
+        } catch {
+            console.error('[Database] Database connection failed (Check if the Database is on)')
         }
     }
 
@@ -70,7 +75,7 @@ export class ListService {
     }
 
     login(email: String, password: String): Promise<Answer> {
-        return new Promise((res, rej) => {
+        return new Promise((res) => {
                 let answer: Answer = new Answer();
 
                 answer.validation.email = this.validateEmail(email);
@@ -100,7 +105,7 @@ export class ListService {
                                     .where("email = :email", {email: email})
                                     .execute()
                                     .then(() => {
-                                        console.log('[Login] Token inserted into DB for \"', email + '\"');
+                                        console.log('[Login] Token inserted into DB for \"' + email + '\"');
                                     }).catch(() => {
                                     console.error('Error inserting Token into Database for \"' + email + '\"');
                                 });
@@ -112,7 +117,7 @@ export class ListService {
                             }
                             console.log('[HTTP] Returning:', answer);
                             res(answer);
-                        }).catch((err) => {
+                        }).catch(() => {
                         console.error('[Login] Email not registered: \"' + email + '\"');
                         answer.code = 102;
                         res(answer);
@@ -157,9 +162,10 @@ export class ListService {
                 dbUser.then((usr) => {
                     if (email === usr.email) {
                         console.log('[Register]', email, 'already registered');
-                        answer.code = 2;
+                        answer.code = 201;
+                        res(answer);
                     }
-                }).catch((err) => {
+                }).catch(() => {
                     console.log("[Register] Email not yet registered:", email);
                     try {
 
