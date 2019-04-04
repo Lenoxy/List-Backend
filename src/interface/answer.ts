@@ -1,17 +1,19 @@
 export class Answer {
-    token: String = null;
+    token: string = null;
     validation: ValidationResult = {
         email: null,
         username: null,
-        password: null
+        password: null,
+        repeatPassword: null,
     };
     code: successCode = 1;
 }
 
 export class ValidationResult {
-    email: Boolean = null;
-    username: Boolean = null;
-    password: Boolean = null;
+    email: boolean = null;
+    username: boolean = null;
+    password: boolean = null;
+    repeatPassword: boolean = null;
 }
 
 enum successCode {
@@ -25,6 +27,4 @@ enum successCode {
 
     //REGISTER
     emailExists = 201,
-    passwordsDontMatch = 202,
-
 }

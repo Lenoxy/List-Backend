@@ -32,18 +32,18 @@ export class ListService {
         }
     }
 
-    tokenGenerator(): String {
+    tokenGenerator(): string {
         const tokgen = new TokenGenerator();
         return tokgen.generate();
     }
 
-    validateEmail(email: String): boolean {
+    validateEmail(email: string): boolean {
         email.trim().toLowerCase();
         try {
             //splittedat takes a Email adress and splits for example user@provider.org into "user" and "provider.org".
-            let splittedat: String[] = email.split('@');
+            let splittedat: string[] = email.split('@');
             //splitteddot takes the output of the first splitter "provider.org" and splits it into "provider" and "org".
-            let splitteddot: String[] = splittedat[1].split('.');
+            let splitteddot: string[] = splittedat[1].split('.');
             //Checking if these texts aren't too long
 
             return splittedat[0].length >= 2 && splitteddot[0].length >= 2 && splitteddot[1].length >= 2;
@@ -53,78 +53,77 @@ export class ListService {
         }
     }
 
-    validateUsername(username: String): boolean {
+    validateUsername(username: string): boolean {
         return username.length >= 3;
     }
 
-    validatePassword(password: String, repeatPassword?: String): boolean {
-        if (password.length >= 6) {
-            if (repeatPassword != null) {
-                if (password === repeatPassword) {
-                    return true;
-                } else {
-                    return null;
-                }
-            } else {
-                return true;
-            }
+    validatePassword(password: string): boolean {
+        if (password === null) {
+            return false;
+        } else if (password.length >= 6) {
+            return true;
         } else {
-            return false
+            return false;
         }
-
     }
 
-    login(email: String, password: String): Promise<Answer> {
+    validateRepeatPassword(password: string, repeatPassword: string): boolean {
+        if (password && repeatPassword) {
+            return password === repeatPassword;
+        } else {
+            return false;
+        }
+    }
+
+    login(email: string, password: string): Promise<Answer> {
         return new Promise((res) => {
-                let answer: Answer = new Answer();
+            let answer: Answer = new Answer();
 
-                answer.validation.email = this.validateEmail(email);
-                answer.validation.password = this.validatePassword(password);
+            answer.validation.email = this.validateEmail(email);
+            answer.validation.password = this.validatePassword(password);
 
-                console.log('[Validation] Email:', answer.validation.email, "Password:", answer.validation.password);
+            console.log('[Validation] Email:', answer.validation.email, "Password:", answer.validation.password);
 
-                if (!answer.validation.email || !answer.validation.password) {
-                    res(answer);
-                } else {
+            if (!answer.validation.email || !answer.validation.password) {
+                res(answer);
+            } else {
 
-                    this.connection
-                        .getRepository(User)
-                        .createQueryBuilder("mail")
-                        .where("mail.email = :email", {email: email})
-                        .getOne()
-                        .then((usr: User) => {
-                            if (password === usr.password) {
-                                console.log('[Login]', email, 'Logged in successfully', usr);
-                                answer.token = this.tokenGenerator();
+                this.connection
+                    .getRepository(User)
+                    .createQueryBuilder("mail")
+                    .where("mail.email = :email", {email: email})
+                    .getOne()
+                    .then((usr: User) => {
+                        if (password === usr.password) {
+                            console.log('[Login]', email, 'Logged in successfully', usr);
+                            answer.token = this.tokenGenerator();
 
-                                this.connection
-                                    .getRepository(User)
-                                    .createQueryBuilder()
-                                    .update(User)
-                                    .set({current_token: answer.token})
-                                    .where("email = :email", {email: email})
-                                    .execute()
-                                    .then(() => {
-                                        console.log('[Login] Token inserted into DB for \"' + email + '\"');
-                                    }).catch(() => {
-                                    console.error('Error inserting Token into Database for \"' + email + '\"');
-                                });
+                            this.connection
+                                .getRepository(User)
+                                .createQueryBuilder()
+                                .update(User)
+                                .set({current_token: answer.token})
+                                .where("email = :email", {email: email})
+                                .execute()
+                                .then(() => {
+                                    console.log('[Login] Token inserted into DB for \"' + email + '\"');
+                                }).catch(() => {
+                                console.error('Error inserting Token into Database for \"' + email + '\"');
+                            });
 
-                            } else {
-                                console.log('[Login] Wrong password for user', email);
-                                answer.code = 101;
-
-                            }
-                            console.log('[HTTP] Returning:', answer);
-                            res(answer);
-                        }).catch(() => {
-                        console.error('[Login] Email not registered: \"' + email + '\"');
-                        answer.code = 102;
+                        } else {
+                            console.log('[Login] Wrong password for user', email);
+                            answer.code = 101;
+                        }
+                        console.log('[HTTP] Returning:', answer);
                         res(answer);
-                    });
-                }
+                    }).catch(() => {
+                    console.error('[Login] Email not registered: \"' + email + '\"');
+                    answer.code = 102;
+                    res(answer);
+                });
             }
-        );
+        });
     }
 
     register(email: string, username: string, password: string, repeatPassword: string): Promise<Answer> {
@@ -135,13 +134,15 @@ export class ListService {
             answer.validation = {
                 email: this.validateEmail(email),
                 username: this.validateUsername(username),
-                password: this.validatePassword(password, repeatPassword)
+                password: this.validatePassword(password),
+                repeatPassword: this.validateRepeatPassword(password, repeatPassword),
             };
             console.log(
                 '[Validation] Result:',
                 'Email:', answer.validation.email,
                 'Username:', answer.validation.username,
-                'Password:', answer.validation.password
+                'Password:', answer.validation.password,
+                'RepeatPassword:', answer.validation.repeatPassword,
             );
 
             if (answer.validation.password === null) {
@@ -184,7 +185,7 @@ export class ListService {
                             .execute();
                         //TODO: Promise return .execute()?
 
-                        answer.token = this.tokenGenerator();
+                        (<string>answer.token) = this.tokenGenerator();
 
                         console.log('[Register] Register for', email, 'completed successfully');
                         res(answer);
