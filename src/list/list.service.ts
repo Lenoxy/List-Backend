@@ -3,6 +3,7 @@ import {Connection, createConnection, getConnection} from "typeorm";
 import {Answer} from "../interface/answer";
 import {User} from "../entity/user";
 import * as connData from '../../ormconfig.json';
+import {Lists} from "../entity/lists";
 
 export class ListService {
     private connection: Connection = null;
@@ -38,8 +39,8 @@ export class ListService {
     }
 
     validateEmail(email: string): boolean {
-        email.trim().toLowerCase();
         try {
+            email.trim().toLowerCase();
             //splittedat takes a Email adress and splits for example user@provider.org into "user" and "provider.org".
             let splittedat: string[] = email.split('@');
             //splitteddot takes the output of the first splitter "provider.org" and splits it into "provider" and "org".
@@ -58,13 +59,9 @@ export class ListService {
     }
 
     validatePassword(password: string): boolean {
-        if (password === null) {
+        if (!password) {
             return false;
-        } else if (password.length >= 6) {
-            return true;
-        } else {
-            return false;
-        }
+        } else return password.length >= 6;
     }
 
     validateRepeatPassword(password: string, repeatPassword: string): boolean {
@@ -75,7 +72,52 @@ export class ListService {
         }
     }
 
+    getIdForToken(token: string): number {
+        if (!token) {
+            return null;
+        } else {
+            this.connection
+                .getRepository(User)
+                .createQueryBuilder()
+                .where("current_token = :placeholder", {placeholder: token})
+                .getOne()
+                .then(
+                    (usr: User) => {
+                        console.log("[ID-Getter] Resolved ID", usr.user_id, "for token", token);
+                        return usr.user_id;
+                    })
+                .catch(
+                    () => {
+                        console.log("[ID-Getter] Could not find ID for given token");
+                        return null;
+                    });
+        }
+    }
+
+
+    getLists(token: string): Lists[] {
+        console.log('[Lists] Recieved:', token);
+        let id: number = this.getIdForToken(token);
+        if (id) {
+            this.connection
+                .getRepository(Lists)
+                .createQueryBuilder()
+                .where("fk_user = :givenId", {givenId: id})
+                .getMany()
+                .then((lists: Lists[]) => {
+                    return lists;
+                }, () => {
+                    return null;
+                })
+        } else {
+            return null;
+        }
+
+    }
+
+
     login(email: string, password: string): Promise<Answer> {
+        console.log('[Login] Recieved request: \"' + email + '\" and \"' + password + '\"');
         return new Promise((res) => {
             let answer: Answer = new Answer();
 
@@ -183,9 +225,8 @@ export class ListService {
                                 }
                             ])
                             .execute();
-                        //TODO: Promise return .execute()?
 
-                        (<string>answer.token) = this.tokenGenerator();
+                        answer.token = this.tokenGenerator();
 
                         console.log('[Register] Register for', email, 'completed successfully');
                         res(answer);
