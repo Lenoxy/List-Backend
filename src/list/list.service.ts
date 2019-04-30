@@ -19,7 +19,7 @@ export class ListService {
                     "username": connData.username,
                     "password": connData.password,
                     "database": connData.database,
-                    "entities": [User]
+                    "entities": [User, Lists]
                 }
             );
 
@@ -72,47 +72,48 @@ export class ListService {
         }
     }
 
-    getIdForToken(token: string): number {
+    async getIdForToken(token: string): Promise<User> {
         if (!token) {
             return null;
         } else {
-            this.connection
+            return this.connection
                 .getRepository(User)
                 .createQueryBuilder()
                 .where("current_token = :placeholder", {placeholder: token})
-                .getOne()
-                .then(
-                    (usr: User) => {
-                        console.log("[ID-Getter] Resolved ID", usr.user_id, "for token", token);
-                        return usr.user_id;
-                    })
-                .catch(
-                    () => {
-                        console.log("[ID-Getter] Could not find ID for given token");
-                        return null;
-                    });
+                .getOne();
         }
     }
 
+    async getLists(token: string): Promise<string[]> {
 
-    getLists(token: string): Lists[] {
         console.log('[Lists] Recieved:', token);
-        let id: number = this.getIdForToken(token);
-        if (id) {
-            this.connection
-                .getRepository(Lists)
-                .createQueryBuilder()
-                .where("fk_user = :givenId", {givenId: id})
-                .getMany()
-                .then((lists: Lists[]) => {
-                    return lists;
-                }, () => {
-                    return null;
-                })
-        } else {
-            return null;
-        }
 
+        try {
+            const usr = await this.getIdForToken(token);
+            if (usr.user_id) {
+                console.log('[ID-Getter]', usr.user_id);
+                let listNames: string[] = await this.connection
+                    .getRepository(Lists)
+                    .createQueryBuilder()
+                    .where("fk_user = :givenId", {givenId: usr.user_id})
+                    .getMany()
+                    .then(lists => {
+                        const nameList: string[] = [];
+                        lists.forEach((x) => {
+                            nameList.push(x.name)
+                        });
+                        return nameList;
+                    });
+
+                return listNames;
+            } else {
+                return Promise.reject();
+            }
+        } catch (e) {
+            console.log('--ERR', e);
+
+            return Promise.reject('Hat nicht geklappt' + e);
+        }
     }
 
 

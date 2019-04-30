@@ -23,7 +23,7 @@ export class AppController {
     }
 
     @Post('/lists/get')
-    async getLists(@Body() body: UserToken) { //body: TOKEN
+    async getLists(@Body() body: UserToken): Promise<string[]> {
         return this.listService.getLists(body.token);
     }
 }

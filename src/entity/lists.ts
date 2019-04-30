@@ -6,8 +6,8 @@ export class Lists {
     id: Number;
 
     @Column({type: "varchar", length: 30, nullable: false})
-    name: String;
+    name: string;
 
     @Column({type: "int"})
-    fk_user: String;
+    fk_user: string;
 }
