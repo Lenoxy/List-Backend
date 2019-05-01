@@ -10,6 +10,11 @@ export interface UserRegister {
     repeatPassword: string
 }
 
-export interface UserToken {
+export interface UserShowLists {
+    token: string;
+}
+
+export interface UserAddList {
+    name: string;
     token: string;
 }

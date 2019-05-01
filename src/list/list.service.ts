@@ -72,15 +72,90 @@ export class ListService {
         }
     }
 
-    async getIdForToken(token: string): Promise<User> {
-        if (!token) {
-            return null;
-        } else {
-            return this.connection
+    async getUserForToken(token: string): Promise<User> {
+        if (token) {
+            return getConnection()
                 .getRepository(User)
                 .createQueryBuilder()
                 .where("current_token = :placeholder", {placeholder: token})
                 .getOne();
+        } else {
+            return null;
+        }
+    }
+
+    async deleteList(name: string, token: string): Promise<boolean> {
+
+        try {
+            const usr = await this.getUserForToken(token);
+            console.log('[Lists-DEL] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
+            if (usr.user_id) {
+                const result = await getConnection()
+                    .createQueryBuilder()
+                    .delete()
+                    .from(Lists)
+                    .where("name = :name && fk_user = :user", {name: name, user: usr.user_id})
+                    .execute();
+                console.log('--', result);
+                return Promise.resolve(result.affected > 0);
+
+            }
+        } catch (e) {
+            return Promise.reject();
+        }
+    }
+
+
+    async renameList(name: string, token: string): Promise<string> {
+        try {
+            const usr = await this.getUserForToken(token);
+            console.log('[Lists-ADD] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
+            if (usr.user_id) {
+                await getConnection()
+                    .createQueryBuilder()
+                    .insert()
+                    .into(Lists)
+                    .values([
+                        {
+                            name: name,
+                            fk_user: usr.user_id.toString(),
+                        }
+                    ])
+                    .execute();
+
+                console.log('[List-ADD] List \"' + name + '\" created successfully');
+                return name;
+
+            }
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async addList(name: string, token: string): Promise<string> {
+
+        try {
+            const usr = await this.getUserForToken(token);
+            console.log('[Lists-ADD] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
+            if (usr.user_id) {
+                await getConnection()
+                    .createQueryBuilder()
+                    .insert()
+                    .into(Lists)
+                    .values([
+                        {
+                            name: name,
+                            fk_user: usr.user_id.toString(),
+                        }
+                    ])
+                    .execute();
+
+                console.log('[List-ADD] List \"' + name + '\" created successfully');
+                return name;
+
+            }
+        } catch (e) {
+            return null;
         }
     }
 
@@ -89,9 +164,8 @@ export class ListService {
         console.log('[Lists] Recieved:', token);
 
         try {
-            const usr = await this.getIdForToken(token);
+            const usr = await this.getUserForToken(token);
             if (usr.user_id) {
-                console.log('[ID-Getter]', usr.user_id);
                 let listNames: string[] = await this.connection
                     .getRepository(Lists)
                     .createQueryBuilder()
@@ -104,15 +178,13 @@ export class ListService {
                         });
                         return nameList;
                     });
-
+                //TODO: VARIABELNNAMEN ÜBERARBEITEN
                 return listNames;
             } else {
                 return Promise.reject();
             }
         } catch (e) {
-            console.log('--ERR', e);
-
-            return Promise.reject('Hat nicht geklappt' + e);
+            return Promise.reject('Error while getting Lists: ' + e);
         }
     }
 

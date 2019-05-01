@@ -1,6 +1,6 @@
 import {Body, Controller, Post} from "@nestjs/common";
 import {ListService} from "./list/list.service";
-import {UserLogin, UserRegister, UserToken} from "./interface/interfaces";
+import {UserAddList, UserLogin, UserRegister, UserShowLists} from "./interface/interfaces";
 import {Answer} from "./interface/answer";
 
 @Controller('')
@@ -23,7 +23,17 @@ export class AppController {
     }
 
     @Post('/lists/get')
-    async getLists(@Body() body: UserToken): Promise<string[]> {
+    async getLists(@Body() body: UserShowLists): Promise<string[]> {
         return this.listService.getLists(body.token);
+    }
+
+    @Post('/lists/add')
+    async addList(@Body() body: UserAddList): Promise<string> {
+        return this.listService.addList(body.name, body.token);
+    }
+
+    @Post('/lists/del')
+    async delList(@Body() body: UserAddList): Promise<boolean> {
+        return this.listService.deleteList(body.name, body.token);
     }
 }
