@@ -96,7 +96,6 @@ export class ListService {
                     .from(Lists)
                     .where("name = :name && fk_user = :user", {name: name, user: usr.user_id})
                     .execute();
-                console.log('--', result);
                 return Promise.resolve(result.affected > 0);
 
             }
@@ -106,34 +105,29 @@ export class ListService {
     }
 
 
-    async renameList(name: string, token: string): Promise<string> {
+    async renameList(oldName: string, newName: string, token: string): Promise<string> {
         try {
             const usr = await this.getUserForToken(token);
-            console.log('[Lists-ADD] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
+            console.log('[Lists-RENAME] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
             if (usr.user_id) {
                 await getConnection()
                     .createQueryBuilder()
-                    .insert()
-                    .into(Lists)
-                    .values([
-                        {
-                            name: name,
-                            fk_user: usr.user_id.toString(),
-                        }
-                    ])
+                    .update(Lists)
+                    .set({name: newName})
+                    .where("name = :oldName && fk_user = :user", {oldName: oldName, user: usr.user_id})
                     .execute();
 
-                console.log('[List-ADD] List \"' + name + '\" created successfully');
-                return name;
+                console.log('[List-RENAME] List \"' + newName + '\" created successfully');
+                return newName;
 
             }
         } catch (e) {
-            return null;
+            console.log(e);
+            Promise.reject();
         }
     }
 
     async addList(name: string, token: string): Promise<string> {
-
         try {
             const usr = await this.getUserForToken(token);
             console.log('[Lists-ADD] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
@@ -153,15 +147,18 @@ export class ListService {
                 console.log('[List-ADD] List \"' + name + '\" created successfully');
                 return name;
 
+            } else {
+                return Promise.reject();
             }
         } catch (e) {
-            return null;
+            console.error('ERROR while adding list', e);
+            return Promise.reject();
         }
     }
 
     async getLists(token: string): Promise<string[]> {
 
-        console.log('[Lists] Recieved:', token);
+        console.log('[Lists-GET] Recieved:', token);
 
         try {
             const usr = await this.getUserForToken(token);

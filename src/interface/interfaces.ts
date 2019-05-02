@@ -18,3 +18,14 @@ export interface UserAddList {
     name: string;
     token: string;
 }
+
+export interface UserDeleteList {
+    name: string;
+    token: string;
+}
+
+export interface UserRenameList {
+    oldName: string;
+    newName: string;
+    token: string;
+}

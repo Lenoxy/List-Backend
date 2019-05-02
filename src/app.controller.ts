@@ -1,6 +1,13 @@
 import {Body, Controller, Post} from "@nestjs/common";
 import {ListService} from "./list/list.service";
-import {UserAddList, UserLogin, UserRegister, UserShowLists} from "./interface/interfaces";
+import {
+    UserAddList,
+    UserDeleteList,
+    UserLogin,
+    UserRegister,
+    UserRenameList,
+    UserShowLists
+} from "./interface/interfaces";
 import {Answer} from "./interface/answer";
 
 @Controller('')
@@ -33,7 +40,12 @@ export class AppController {
     }
 
     @Post('/lists/del')
-    async delList(@Body() body: UserAddList): Promise<boolean> {
+    async delList(@Body() body: UserDeleteList): Promise<boolean> {
         return this.listService.deleteList(body.name, body.token);
+    }
+
+    @Post('/lists/rename')
+    async renameList(@Body() body: UserRenameList): Promise<string> {
+        return this.listService.renameList(body.oldName, body.newName, body.token);
     }
 }
