@@ -6,6 +6,7 @@ import {
     UserLogin,
     UserRegister,
     UserRenameList,
+    UserShowItems,
     UserShowLists
 } from "./interface/interfaces";
 import {Answer} from "./interface/answer";
@@ -48,4 +49,11 @@ export class AppController {
     async renameList(@Body() body: UserRenameList): Promise<string> {
         return this.listService.renameList(body.oldName, body.newName, body.token);
     }
+
+    @Post('/items/get')
+    async getItems(@Body() body: UserShowItems): Promise<string[]> {
+        return this.listService.getItems(body.token, body.listName);
+
+    }
+
 }

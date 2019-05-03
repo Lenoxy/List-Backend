@@ -4,6 +4,7 @@ import {Answer} from "../interface/answer";
 import {User} from "../entity/user";
 import * as connData from '../../ormconfig.json';
 import {Lists} from "../entity/lists";
+import {Items} from "../entity/items";
 
 export class ListService {
     private connection: Connection = null;
@@ -19,7 +20,7 @@ export class ListService {
                     "username": connData.username,
                     "password": connData.password,
                     "database": connData.database,
-                    "entities": [User, Lists]
+                    "entities": [User, Lists, Items]
                 }
             );
 
@@ -84,6 +85,53 @@ export class ListService {
         }
     }
 
+    async getListidForName(listName: string) {
+
+    }
+
+
+    async getItems(token: string, forList: string): Promise<string[]> {
+
+        console.log('[Items-GET] Recieved:', token);
+
+        try {
+            const usr = await this.getUserForToken(token);
+            if (usr.user_id) {
+                return this.connection
+                    .getRepository(Lists)
+                    .createQueryBuilder()
+                    .where("name = :listName && fk_user = :id", {listName: forList, id: usr.user_id})
+                    .getOne()
+                    .then((list: Lists) => {
+
+                        return this.connection
+                            .getRepository(Items)
+                            .createQueryBuilder()
+                            .where("fk_list_id = :listId", {listId: list.id})
+                            .getMany()
+                            .then((itemObj: Items[]) => {
+
+
+                                const itemList: string[] = [];
+                                itemObj.forEach((x) => {
+                                    itemList.push(x.name)
+                                });
+                                return itemList;
+
+
+                            });
+                    });
+            } else {
+                return Promise.reject('Could not get UserID');
+            }
+        } catch (e) {
+            return Promise.reject('Error while getting Items: ' + e);
+        }
+    }
+
+    async addItem(name: string, list: string)
+
+
     async deleteList(name: string, token: string): Promise<boolean> {
 
         try {
@@ -103,7 +151,6 @@ export class ListService {
             return Promise.reject();
         }
     }
-
 
     async renameList(oldName: string, newName: string, token: string): Promise<string> {
         try {

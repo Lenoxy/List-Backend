@@ -29,3 +29,9 @@ export interface UserRenameList {
     newName: string;
     token: string;
 }
+
+
+export interface UserShowItems {
+    token: string;
+    listName: string;
+}
