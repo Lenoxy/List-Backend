@@ -195,22 +195,23 @@ export class ListService {
     async renameList(oldName: string, newName: string, token: string): Promise<string> {
         try {
             const usr = await this.getUserForToken(token);
+            const list = await this.getListForName(oldName, usr.user_id);
             console.log('[Lists-RENAME] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
-            if (usr.user_id) {
+            if (usr.user_id && list) {
                 await getConnection()
                     .createQueryBuilder()
                     .update(Lists)
                     .set({name: newName})
-                    .where("name = :oldName && fk_user = :user", {oldName: oldName, user: usr.user_id})
+                    .where("name = :name && fk_user = :user", {name: oldName, user: usr.user_id})
                     .execute();
 
-                console.log('[List-RENAME] List \"' + newName + '\" created successfully');
+                console.log('[List-RENAME] List \"' + oldName + '\" renamed to \"' + newName + '\" successfully');
                 return newName;
 
             }
         } catch (e) {
             console.log(e);
-            Promise.reject();
+            return Promise.reject(e);
         }
     }
 
