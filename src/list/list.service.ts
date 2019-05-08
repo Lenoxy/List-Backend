@@ -74,19 +74,20 @@ export class ListService {
     }
 
     async getUserForToken(token: string): Promise<User> {
-        if (token) {
-            return getConnection()
-                .getRepository(User)
-                .createQueryBuilder()
-                .where("current_token = :placeholder", {placeholder: token})
-                .getOne();
-        } else {
-            return null;
-        }
+        return getConnection()
+            .getRepository(User)
+            .createQueryBuilder()
+            .where("current_token = :placeholder", {placeholder: token})
+            .getOne();
+
     }
 
-    async getListidForName(listName: string) {
-
+    async getListForName(listName: string, usrId: number) {
+        return getConnection()
+            .getRepository(Lists)
+            .createQueryBuilder()
+            .where("name = :listName && fk_user = :id", {listName: listName, id: usrId})
+            .getOne();
     }
 
 
@@ -96,31 +97,21 @@ export class ListService {
 
         try {
             const usr = await this.getUserForToken(token);
-            if (usr.user_id) {
+            const list = await this.getListForName(forList, usr.user_id);
+            if (usr.user_id && list) {
                 return this.connection
-                    .getRepository(Lists)
+                    .getRepository(Items)
                     .createQueryBuilder()
-                    .where("name = :listName && fk_user = :id", {listName: forList, id: usr.user_id})
-                    .getOne()
-                    .then((list: Lists) => {
-
-                        return this.connection
-                            .getRepository(Items)
-                            .createQueryBuilder()
-                            .where("fk_list_id = :listId", {listId: list.id})
-                            .getMany()
-                            .then((itemObj: Items[]) => {
-
-
-                                const itemList: string[] = [];
-                                itemObj.forEach((x) => {
-                                    itemList.push(x.name)
-                                });
-                                return itemList;
-
-
-                            });
+                    .where("fk_list_id = :listId", {listId: list.id})
+                    .getMany()
+                    .then((itemObj: Items[]) => {
+                        const itemList: string[] = [];
+                        itemObj.forEach((x) => {
+                            itemList.push(x.name);
+                        });
+                        return itemList;
                     });
+
             } else {
                 return Promise.reject('Could not get UserID');
             }
@@ -129,7 +120,56 @@ export class ListService {
         }
     }
 
-    async addItem(name: string, list: string)
+    async addItem(token: string, name: string, forList: string) {
+        try {
+            const usr = await this.getUserForToken(token);
+            const list = await this.getListForName(forList, usr.user_id);
+            if (usr && list) {
+                await getConnection()
+                    .createQueryBuilder()
+                    .insert()
+                    .into(Items)
+                    .values([
+                        {
+                            name: name,
+                            fk_list_id: list.id.toString(),
+                        }
+                    ])
+                    .execute();
+
+                console.log('[Items-ADD] Item \"' + name + '\" created successfully');
+                return name;
+
+            } else {
+                return Promise.reject('Error');
+            }
+        } catch (e) {
+            return Promise.reject('Error: ' + e);
+        }
+    }
+
+
+    async deleteItem(token: string, itemName: string, forList: string): Promise<boolean> /* TODO: Promise <any> */ {
+        try {
+            const usr = await this.getUserForToken(token);
+            const list = await this.getListForName(forList, usr.user_id);
+            console.log('[Items-DEL] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
+
+            if (list) {
+                const result = await getConnection()
+                    .createQueryBuilder()
+                    .delete()
+                    .from(Items)
+                    .where("name = :name && fk_list_id = :list", {name: itemName, list: list.id.toString()})
+                    .execute();
+                return Promise.resolve(result.affected > 0);
+
+            }
+        } catch (e) {
+            console.log(e);
+            return Promise.reject(e);
+        }
+    }
 
 
     async deleteList(name: string, token: string): Promise<boolean> {
@@ -205,10 +245,9 @@ export class ListService {
 
     async getLists(token: string): Promise<string[]> {
 
-        console.log('[Lists-GET] Recieved:', token);
-
         try {
             const usr = await this.getUserForToken(token);
+            console.log('[Lists-GET] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
             if (usr.user_id) {
                 let listNames: string[] = await this.connection
                     .getRepository(Lists)

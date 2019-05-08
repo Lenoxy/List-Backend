@@ -35,3 +35,15 @@ export interface UserShowItems {
     token: string;
     listName: string;
 }
+
+export interface UserAddItems {
+    token: string,
+    name: string,
+    forList: string,
+}
+
+export interface UserDelItems {
+    token: string,
+    name: string,
+    forList: string,
+}

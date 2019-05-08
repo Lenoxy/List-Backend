@@ -1,8 +1,10 @@
 import {Body, Controller, Post} from "@nestjs/common";
 import {ListService} from "./list/list.service";
 import {
+    UserAddItems,
     UserAddList,
     UserDeleteList,
+    UserDelItems,
     UserLogin,
     UserRegister,
     UserRenameList,
@@ -50,10 +52,20 @@ export class AppController {
         return this.listService.renameList(body.oldName, body.newName, body.token);
     }
 
+
     @Post('/items/get')
     async getItems(@Body() body: UserShowItems): Promise<string[]> {
         return this.listService.getItems(body.token, body.listName);
 
     }
 
+    @Post('/items/add')
+    async addItem(@Body() body: UserAddItems) {
+        return this.listService.addItem(body.token, body.name, body.forList);
+    }
+
+    @Post('/items/del')
+    async delItem(@Body() body: UserDelItems) {
+        return this.listService.deleteItem(body.token, body.name, body.forList);
+    }
 }
