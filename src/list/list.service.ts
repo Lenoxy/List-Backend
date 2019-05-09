@@ -113,7 +113,7 @@ export class ListService {
                     });
 
             } else {
-                return Promise.reject('Could not get UserID');
+                return Promise.reject('Could not get UserID or/and list: ');
             }
         } catch (e) {
             return Promise.reject('Error while getting Items: ' + e);
@@ -196,7 +196,7 @@ export class ListService {
         try {
             const usr = await this.getUserForToken(token);
             const list = await this.getListForName(oldName, usr.user_id);
-            console.log('[Lists-RENAME] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
+            console.log('[Lists-RENAME] Received: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
             if (usr.user_id && list) {
                 await getConnection()
                     .createQueryBuilder()
@@ -250,20 +250,18 @@ export class ListService {
             const usr = await this.getUserForToken(token);
             console.log('[Lists-GET] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
             if (usr.user_id) {
-                let listNames: string[] = await this.connection
+                return await this.connection
                     .getRepository(Lists)
                     .createQueryBuilder()
                     .where("fk_user = :givenId", {givenId: usr.user_id})
                     .getMany()
-                    .then(lists => {
+                    .then((listsObjFromDB) => {
                         const nameList: string[] = [];
-                        lists.forEach((x) => {
-                            nameList.push(x.name)
+                        listsObjFromDB.forEach((x) => {
+                            nameList.push(x.name);
                         });
                         return nameList;
                     });
-                //TODO: VARIABELNNAMEN ÜBERARBEITEN
-                return listNames;
             } else {
                 return Promise.reject();
             }
