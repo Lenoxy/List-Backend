@@ -6,9 +6,19 @@ import * as connData from '../../ormconfig.json';
 import {Lists} from "../entity/lists";
 import {Items} from "../entity/items";
 
+export interface IUserWithList {
+    user: User,
+    list: Lists,
+}
+
+export interface IUserWithListWithItem {
+    user: User,
+    list: Lists,
+    item: Items,
+}
+
 export class ListService {
     private connection: Connection = null;
-
 
     async connectDatabase(): Promise<void> {
         try {
@@ -28,9 +38,11 @@ export class ListService {
                 console.log('[Database] connected on', connData.host + ':' + connData.port);
             } else {
                 console.error('[Database] connection error on', connData.host + ':' + connData.port);
+                process.exit(-1);
             }
         } catch {
-            console.error('[Database] Database connection failed (Check if the Database is on)')
+            console.error('[Database] Database connection failed (Check if the Database is on)');
+            process.exit(-1);
         }
     }
 
@@ -73,7 +85,7 @@ export class ListService {
         }
     }
 
-    async getUserForToken(token: string): Promise<User> {
+    getUserForToken(token: string): Promise<User> {
         return getConnection()
             .getRepository(User)
             .createQueryBuilder()
@@ -82,41 +94,64 @@ export class ListService {
 
     }
 
-    async getListForName(listName: string, usrId: number) {
+    getListForName(listName: string, usrId: number): Promise<Lists> {
         return getConnection()
             .getRepository(Lists)
             .createQueryBuilder()
             .where("name = :listName && fk_user = :id", {listName: listName, id: usrId})
-            .getOne();
+            .getOne()
+            .then(data => {
+                console.error(`****************** listName:${listName} usrId:${usrId} ${JSON.stringify(data)}`);
+                return data
+            });
     }
 
+    getItemForName(listID: number, userID: number, itemName: string): Promise<Items> {
+        return getConnection()
+            .getRepository(Lists)
+            .createQueryBuilder()
+            .where("fk_user = :userID && id = :listID", {userID: userID, listID: listID})
+            .getOne()
+            .then((Lists) => {
+                return getConnection()
+                    .getRepository(Items)
+                    .createQueryBuilder()
+                    .where("name = :itemName", {itemName: itemName})
+                    .getOne();
+            });
+    }
 
     async getItems(token: string, forList: string): Promise<string[]> {
 
         console.log('[Items-GET] Recieved:', token);
 
-        try {
-            const usr = await this.getUserForToken(token);
-            const list = await this.getListForName(forList, usr.user_id);
-            if (usr.user_id && list) {
-                return this.connection
-                    .getRepository(Items)
-                    .createQueryBuilder()
-                    .where("fk_list_id = :listId", {listId: list.id})
-                    .getMany()
-                    .then((itemObj: Items[]) => {
-                        const itemList: string[] = [];
-                        itemObj.forEach((x) => {
-                            itemList.push(x.name);
-                        });
-                        return itemList;
-                    });
+        if (forList === undefined) {
+            console.log('[Items-GET] Please select a List in order to get Items (List undefined)');
+        } else {
 
-            } else {
-                return Promise.reject('Could not get UserID or/and list: ');
+            try {
+                const usr = await this.getUserForToken(token);
+                const list = await this.getListForName(forList, usr.user_id);
+                if (usr.user_id && list) {
+                    return this.connection
+                        .getRepository(Items)
+                        .createQueryBuilder()
+                        .where("fk_list_id = :listId", {listId: list.id})
+                        .getMany()
+                        .then((itemObj: Items[]) => {
+                            const itemList: string[] = [];
+                            itemObj.forEach((x) => {
+                                itemList.push(x.name);
+                            });
+                            return itemList;
+                        });
+
+                } else {
+                    return Promise.reject('Could not get List for entry \"' + forList + '\"');
+                }
+            } catch (e) {
+                return Promise.reject('Error while getting Items: ' + e);
             }
-        } catch (e) {
-            return Promise.reject('Error while getting Items: ' + e);
         }
     }
 
@@ -148,8 +183,7 @@ export class ListService {
         }
     }
 
-
-    async deleteItem(token: string, itemName: string, forList: string): Promise<boolean> /* TODO: Promise <any> */ {
+    async deleteItem(token: string, itemName: string, forList: string): Promise<boolean> {
         try {
             const usr = await this.getUserForToken(token);
             const list = await this.getListForName(forList, usr.user_id);
@@ -169,6 +203,22 @@ export class ListService {
             console.log(e);
             return Promise.reject(e);
         }
+    }
+
+    async renameItem(token: string, oldName: string, newName: string, forList: string): Promise<boolean> {
+        const user = await this.getUserForToken(token);
+        const list = await this.getListForName(forList, user.user_id);
+        const item = await this.getItemForName(list.id, user.user_id, oldName);
+        return await getConnection()
+            .createQueryBuilder()
+            .update(Items)
+            .set({name: newName})
+            .where("id = :id", {id: item.id})
+            .execute()
+            .then((z) => {
+                return true;
+            });
+
     }
 
 
@@ -192,27 +242,18 @@ export class ListService {
         }
     }
 
-    async renameList(oldName: string, newName: string, token: string): Promise<string> {
-        try {
-            const usr = await this.getUserForToken(token);
-            const list = await this.getListForName(oldName, usr.user_id);
-            console.log('[Lists-RENAME] Received: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
-            if (usr.user_id && list) {
-                await getConnection()
+    async renameList(oldName: string, newName: string, token: string) {
+        this.getUserForToken(token).then((usr) => {
+            this.getListForName(oldName, usr.user_id).then((list) => {
+                console.log('[List-RENAME] List \"' + oldName + '\" renamed to \"' + newName + '\"');
+                return getConnection()
                     .createQueryBuilder()
                     .update(Lists)
                     .set({name: newName})
-                    .where("name = :name && fk_user = :user", {name: oldName, user: usr.user_id})
+                    .where("id = :id", {id: list.id})
                     .execute();
-
-                console.log('[List-RENAME] List \"' + oldName + '\" renamed to \"' + newName + '\" successfully');
-                return newName;
-
-            }
-        } catch (e) {
-            console.log(e);
-            return Promise.reject(e);
-        }
+            });
+        });
     }
 
     async addList(name: string, token: string): Promise<string> {
@@ -245,7 +286,6 @@ export class ListService {
     }
 
     async getLists(token: string): Promise<string[]> {
-
         try {
             const usr = await this.getUserForToken(token);
             console.log('[Lists-GET] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');

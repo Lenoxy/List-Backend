@@ -47,3 +47,10 @@ export interface UserDelItems {
     name: string,
     forList: string,
 }
+
+export interface UserRenameItems {
+    token: string;
+    oldName: string;
+    newName: string;
+    forList: string;
+}

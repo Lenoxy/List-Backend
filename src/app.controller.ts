@@ -7,6 +7,7 @@ import {
     UserDelItems,
     UserLogin,
     UserRegister,
+    UserRenameItems,
     UserRenameList,
     UserShowItems,
     UserShowLists
@@ -32,6 +33,7 @@ export class AppController {
         return this.listService.register(body.email, body.username, body.password, body.repeatPassword);
     }
 
+
     @Post('/lists/get')
     async getLists(@Body() body: UserShowLists): Promise<string[]> {
         return this.listService.getLists(body.token);
@@ -48,7 +50,7 @@ export class AppController {
     }
 
     @Post('/lists/rename')
-    async renameList(@Body() body: UserRenameList): Promise<string> {
+    async renameList(@Body() body: UserRenameList) {
         return this.listService.renameList(body.oldName, body.newName, body.token);
     }
 
@@ -56,7 +58,6 @@ export class AppController {
     @Post('/items/get')
     async getItems(@Body() body: UserShowItems): Promise<string[]> {
         return this.listService.getItems(body.token, body.listName);
-
     }
 
     @Post('/items/add')
@@ -67,5 +68,10 @@ export class AppController {
     @Post('/items/del')
     async delItem(@Body() body: UserDelItems) {
         return this.listService.deleteItem(body.token, body.name, body.forList);
+    }
+
+    @Post('/items/rename')
+    async renameItem(@Body() body: UserRenameItems) {
+        return this.listService.renameItem(body.token, body.oldName, body.newName, body.forList);
     }
 }
