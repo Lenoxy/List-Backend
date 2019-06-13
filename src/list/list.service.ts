@@ -100,10 +100,6 @@ export class ListService {
             .createQueryBuilder()
             .where("name = :listName && fk_user = :id", {listName: listName, id: usrId})
             .getOne()
-            .then(data => {
-                console.error(`****************** listName:${listName} usrId:${usrId} ${JSON.stringify(data)}`);
-                return data
-            });
     }
 
     getItemForName(listID: number, userID: number, itemName: string): Promise<Items> {
@@ -215,7 +211,8 @@ export class ListService {
             .set({name: newName})
             .where("id = :id", {id: item.id})
             .execute()
-            .then((z) => {
+            .then(() => {
+                console.log('[Item-RENAME] Item \"' + oldName + '\" renamed to \"' + newName + '\"');
                 return true;
             });
 
@@ -245,13 +242,16 @@ export class ListService {
     async renameList(oldName: string, newName: string, token: string) {
         this.getUserForToken(token).then((usr) => {
             this.getListForName(oldName, usr.user_id).then((list) => {
-                console.log('[List-RENAME] List \"' + oldName + '\" renamed to \"' + newName + '\"');
                 return getConnection()
                     .createQueryBuilder()
                     .update(Lists)
                     .set({name: newName})
                     .where("id = :id", {id: list.id})
-                    .execute();
+                    .execute()
+                    .then(() => {
+                        console.log('[List-RENAME] List \"' + oldName + '\" renamed to \"' + newName + '\"');
+                        return true;
+                    });
             });
         });
     }
