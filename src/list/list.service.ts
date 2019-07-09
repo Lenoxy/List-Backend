@@ -40,8 +40,8 @@ export class ListService {
                 console.error('[Database] connection error on', connData.host + ':' + connData.port);
                 process.exit(-1);
             }
-        } catch {
-            console.error('[Database] Database connection failed (Check if the Database is on)');
+        } catch (e) {
+            console.error('[Database] Database connection failed' + e);
             process.exit(-1);
         }
     }
