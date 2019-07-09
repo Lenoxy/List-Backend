@@ -1,10 +1,10 @@
 {
   "type": "mysql",
-  "host": "localhost",
+  "host": "lenoxyne.mysql.db.hostpoint.ch",
   "port": 3306,
-  "username": "root",
-  "password": "",
-  "database": "list",
+  "username": "lenoxyne_admin",
+  "password": "LFZDE9V2",
+  "database": "lenoxyne_list",
   "entities": [
     "dist/entity/*"
   ]
