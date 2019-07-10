@@ -5,7 +5,7 @@ import {CorsOptions} from "@nestjs/common/interfaces/external/cors-options.inter
 
 async function bootstrap() {
     const corsOptions: CorsOptions = {
-        origin: 'http://localhost:4200'
+        origin: 'https://list.lenoxy.net'
     };
     const appOptions: NestApplicationOptions = {
         cors: corsOptions
