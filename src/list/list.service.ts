@@ -256,7 +256,7 @@ export class ListService {
         });
     }
 
-    async addList(name: string, token: string): Promise<string> {
+    async addList(name: string, token: string): Promise<void> {
         try {
             const usr = await this.getUserForToken(token);
             console.log('[Lists-ADD] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
@@ -271,11 +271,11 @@ export class ListService {
                             fk_user: usr.user_id.toString(),
                         }
                     ])
-                    .execute();
-
-                console.log('[List-ADD] List \"' + name + '\" created successfully');
-                return name;
-
+                    .execute()
+                    .then(() => {
+                        console.log('[List-ADD] List \"' + name + '\" created successfully');
+                        return Promise.resolve();
+                    });
             } else {
                 return Promise.reject();
             }
