@@ -40,7 +40,7 @@ export class AppController {
     }
 
     @Post('/lists/add')
-    async addList(@Body() body: UserAddList): Promise<string> {
+    async addList(@Body() body: UserAddList): Promise<void> {
         return this.listService.addList(body.name, body.token);
     }
 
