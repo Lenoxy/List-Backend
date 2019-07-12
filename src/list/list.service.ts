@@ -166,16 +166,17 @@ export class ListService {
                             fk_list_id: list.id.toString(),
                         }
                     ])
-                    .execute();
-
-                console.log('[Items-ADD] Item \"' + name + '\" created successfully');
-                return name;
-
+                    .execute()
+                    .then(() => {
+                        console.log('[Item-ADD] Item \"' + name + '\" created successfully');
+                        return Promise.resolve();
+                    });
             } else {
-                return Promise.reject('Error');
+                return Promise.reject();
             }
         } catch (e) {
-            return Promise.reject('Error: ' + e);
+            console.error('ERROR while adding item:', e);
+            return Promise.reject();
         }
     }
 
