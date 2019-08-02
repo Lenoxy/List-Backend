@@ -151,76 +151,88 @@ export class ListService {
         }
     }
 
-    async addItem(token: string, name: string, forList: string) {
-        try {
-            const usr = await this.getUserForToken(token);
-            const list = await this.getListForName(forList, usr.user_id);
-            if (usr && list) {
-                await getConnection()
-                    .createQueryBuilder()
-                    .insert()
-                    .into(Items)
-                    .values([
-                        {
-                            name: name,
-                            fk_list_id: list.id.toString(),
-                        }
-                    ])
-                    .execute()
-                    .then(() => {
-                        console.log('[Item-ADD] Item \"' + name + '\" created successfully');
-                        return Promise.resolve();
-                    });
-            } else {
+    async addItem(token: string, name: string, forList: string): Promise<void> {
+        if (name == '') {
+            return Promise.reject();
+        } else {
+            try {
+                const usr = await this.getUserForToken(token);
+                const list = await this.getListForName(forList, usr.user_id);
+                if (usr && list) {
+                    await getConnection()
+                        .createQueryBuilder()
+                        .insert()
+                        .into(Items)
+                        .values([
+                            {
+                                name: name,
+                                fk_list_id: list.id.toString(),
+                            }
+                        ])
+                        .execute()
+                        .then(() => {
+                            console.log('[Item-ADD] Item \"' + name + '\" created successfully');
+                            return Promise.resolve();
+                        });
+                } else {
+                    return Promise.reject();
+                }
+            } catch (e) {
+                console.error('ERROR while adding item:', e);
                 return Promise.reject();
             }
-        } catch (e) {
-            console.error('ERROR while adding item:', e);
-            return Promise.reject();
         }
     }
 
-    async deleteItem(token: string, itemName: string, forList: string): Promise<boolean> {
+    async deleteItem(token: string, itemName: string, forList: string): Promise<void> {
         try {
             const usr = await this.getUserForToken(token);
             const list = await this.getListForName(forList, usr.user_id);
             console.log('[Items-DEL] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
 
             if (list) {
-                const result = await getConnection()
+                await getConnection()
                     .createQueryBuilder()
                     .delete()
                     .from(Items)
                     .where("name = :name && fk_list_id = :list", {name: itemName, list: list.id.toString()})
                     .execute();
-                return Promise.resolve(result.affected > 0);
+                console.log('[Items-DEL] Item \"', itemName, '\" deleted successfully');
+                return Promise.resolve();
 
+            } else {
+                return Promise.reject('[Item-DEL] Could not delete Item');
             }
-        } catch (e) {
-            console.log(e);
-            return Promise.reject(e);
+        } catch {
+            console.error('[Item-DEL] Could not delete Item');
+            return Promise.reject();
         }
     }
 
-    async renameItem(token: string, oldName: string, newName: string, forList: string): Promise<boolean> {
-        const user = await this.getUserForToken(token);
-        const list = await this.getListForName(forList, user.user_id);
-        const item = await this.getItemForName(list.id, user.user_id, oldName);
-        return await getConnection()
-            .createQueryBuilder()
-            .update(Items)
-            .set({name: newName})
-            .where("id = :id", {id: item.id})
-            .execute()
-            .then(() => {
-                console.log('[Item-RENAME] Item \"' + oldName + '\" renamed to \"' + newName + '\"');
-                return true;
-            });
+    async renameItem(token: string, oldName: string, newName: string, forList: string): Promise<void> {
+        if (newName == '' || newName === oldName) {
+            return Promise.reject();
+        } else {
+            const user = await this.getUserForToken(token);
+            const list = await this.getListForName(forList, user.user_id);
+            const item = await this.getItemForName(list.id, user.user_id, oldName);
+            console.log('[Item-RENAME] User:', user.username, 'List:', list.name, 'Item:', item.name);
 
+            return await getConnection()
+                .createQueryBuilder()
+                .update(Items)
+                .set({name: newName})
+                .where("id = :id", {id: item.id})
+                .execute()
+                .then(() => {
+                    console.log('[Item-RENAME] Item \"' + oldName + '\" renamed to \"' + newName + '\"');
+                    return Promise.resolve();
+                });
+        }
     }
 
 
-    async deleteList(name: string, token: string): Promise<boolean> {
+    async deleteList(name: string, token: string): Promise<void> {
 
         try {
             const usr = await this.getUserForToken(token);
@@ -232,7 +244,7 @@ export class ListService {
                     .from(Lists)
                     .where("name = :name && fk_user = :user", {name: name, user: usr.user_id})
                     .execute();
-                return Promise.resolve(result.affected > 0);
+                return Promise.resolve();
 
             }
         } catch (e) {
@@ -240,49 +252,58 @@ export class ListService {
         }
     }
 
-    async renameList(oldName: string, newName: string, token: string) {
-        this.getUserForToken(token).then((usr) => {
-            this.getListForName(oldName, usr.user_id).then((list) => {
-                return getConnection()
-                    .createQueryBuilder()
-                    .update(Lists)
-                    .set({name: newName})
-                    .where("id = :id", {id: list.id})
-                    .execute()
-                    .then(() => {
-                        console.log('[List-RENAME] List \"' + oldName + '\" renamed to \"' + newName + '\"');
-                        return true;
-                    });
-            });
-        });
+    async renameList(token: string, oldName: string, newName: string): Promise<void> {
+        if (newName == '' || newName === oldName) {
+            return Promise.reject();
+        } else {
+            const user = await this.getUserForToken(token);
+            const list = await this.getListForName(oldName, user.user_id);
+            console.log('[List-RENAME] User:', user.username, 'List:', list.name);
+
+            return getConnection()
+                .createQueryBuilder()
+                .update(Lists)
+                .set({name: newName})
+                .where("id = :id && fk_user = :user", {id: list.id, user: user.user_id})
+                .execute()
+                .then(() => {
+                    console.log('[List-RENAME] List \"' + oldName + '\" renamed to \"' + newName + '\"');
+                    return Promise.resolve();
+                });
+
+        }
     }
 
     async addList(name: string, token: string): Promise<void> {
-        try {
-            const usr = await this.getUserForToken(token);
-            console.log('[Lists-ADD] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
-            if (usr.user_id) {
-                await getConnection()
-                    .createQueryBuilder()
-                    .insert()
-                    .into(Lists)
-                    .values([
-                        {
-                            name: name,
-                            fk_user: usr.user_id.toString(),
-                        }
-                    ])
-                    .execute()
-                    .then(() => {
-                        console.log('[List-ADD] List \"' + name + '\" created successfully');
-                        return Promise.resolve();
-                    });
-            } else {
+        if (name == '') {
+            return Promise.reject();
+        } else {
+            try {
+                const usr = await this.getUserForToken(token);
+                console.log('[Lists-ADD] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
+                if (usr.user_id) {
+                    await getConnection()
+                        .createQueryBuilder()
+                        .insert()
+                        .into(Lists)
+                        .values([
+                            {
+                                name: name,
+                                fk_user: usr.user_id.toString(),
+                            }
+                        ])
+                        .execute()
+                        .then(() => {
+                            console.log('[List-ADD] List \"' + name + '\" created successfully');
+                            return Promise.resolve();
+                        });
+                } else {
+                    return Promise.reject();
+                }
+            } catch (e) {
+                console.error('ERROR while adding list', e);
                 return Promise.reject();
             }
-        } catch (e) {
-            console.error('ERROR while adding list', e);
-            return Promise.reject();
         }
     }
 
@@ -307,6 +328,7 @@ export class ListService {
                 return Promise.reject();
             }
         } catch (e) {
+            console.log('[Lists-GET] Error while getting Lists');
             return Promise.reject('Error while getting Lists: ' + e);
         }
     }

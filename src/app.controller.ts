@@ -45,13 +45,13 @@ export class AppController {
     }
 
     @Post('/lists/del')
-    async delList(@Body() body: UserDeleteList): Promise<boolean> {
+    async delList(@Body() body: UserDeleteList): Promise<void> {
         return this.listService.deleteList(body.name, body.token);
     }
 
     @Post('/lists/rename')
-    async renameList(@Body() body: UserRenameList) {
-        return this.listService.renameList(body.oldName, body.newName, body.token);
+    async renameList(@Body() body: UserRenameList): Promise<void> {
+        return this.listService.renameList(body.token, body.oldName, body.newName);
     }
 
 
@@ -61,17 +61,17 @@ export class AppController {
     }
 
     @Post('/items/add')
-    async addItem(@Body() body: UserAddItems) {
+    async addItem(@Body() body: UserAddItems): Promise<void> {
         return this.listService.addItem(body.token, body.name, body.forList);
     }
 
     @Post('/items/del')
-    async delItem(@Body() body: UserDelItems) {
+    async delItem(@Body() body: UserDelItems): Promise<void> {
         return this.listService.deleteItem(body.token, body.name, body.forList);
     }
 
     @Post('/items/rename')
-    async renameItem(@Body() body: UserRenameItems) {
+    async renameItem(@Body() body: UserRenameItems): Promise<void> {
         return this.listService.renameItem(body.token, body.oldName, body.newName, body.forList);
     }
 }
