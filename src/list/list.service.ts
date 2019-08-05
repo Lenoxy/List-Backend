@@ -385,7 +385,7 @@ export class ListService {
         });
     }
 
-    async register(email: string, username: string, password: string, repeatPassword: string): Promise<Answer> {
+    register(email: string, username: string, password: string, repeatPassword: string): Promise<Answer> {
         return new Promise((resolve, reject) => {
             let answer: Answer = new Answer();
             console.log('[Register] Registration recieved:', email, username, password, repeatPassword);
@@ -412,44 +412,46 @@ export class ListService {
 
             if (answer.validation.email == true && answer.validation.username == true && answer.validation.password == true) {
 
-                this.connection
-                    .getRepository(User)
-                    .createQueryBuilder("mail")
-                    .where("mail.email = :email", {email: email})
-                    .getOne().then((usr) => {
+                const dbUser: Promise<User> =
+                    this.connection
+                        .getRepository(User)
+                        .createQueryBuilder("mail")
+                        .where("mail.email = :email", {email: email})
+                        .getOne();
+
+                dbUser.then((usr) => {
                     if (email === usr.email) {
                         console.log('[Register]', email, 'already registered');
                         answer.code = 201;
                         resolve(answer);
-                    } else {
-                        console.log("[Register] Email not yet registered:", email);
-                        try {
-                            getConnection()
-                                .createQueryBuilder()
-                                .insert()
-                                .into(User)
-                                .values([
-                                    {
-                                        email: email,
-                                        username: username,
-                                        password: password,
-                                        current_token: this.tokenGenerator()
-                                    }
-                                ])
-                                .execute();
-
-                            answer.token = this.tokenGenerator();
-
-                            console.log('[Register] Register for', email, 'completed successfully');
-                            resolve(answer);
-                        } catch {
-                            console.error('[Register] Error while inserting data to database');
-                            answer.code = 1;
-                            reject(answer);
-                        }
                     }
                 }).catch(() => {
-                    console.error()
+                    console.log("[Register] Email not yet registered:", email);
+                    try {
+                        const token = this.tokenGenerator();
+                        getConnection()
+                            .createQueryBuilder()
+                            .insert()
+                            .into(User)
+                            .values([
+                                {
+                                    email: email,
+                                    username: username,
+                                    password: password,
+                                    current_token: token
+                                }
+                            ])
+                            .execute();
+
+                        answer.token = token;
+
+                        console.log('[Register] Register for', email, 'completed successfully');
+                        resolve(answer);
+                    } catch {
+                        console.error('[Register] Error while inserting data to database');
+                        answer.code = 1;
+                        reject(answer);
+                    }
                 });
             } else {
                 resolve(answer);
