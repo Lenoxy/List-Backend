@@ -153,6 +153,7 @@ export class ListService {
 
     async addItem(token: string, name: string, forList: string): Promise<void> {
         if (name == '') {
+            console.error('[Item-ADD] Error while adding item');
             return Promise.reject();
         } else {
             try {
@@ -175,10 +176,11 @@ export class ListService {
                             return Promise.resolve();
                         });
                 } else {
+                    console.error('[Item-ADD] Error while adding item');
                     return Promise.reject();
                 }
-            } catch (e) {
-                console.error('ERROR while adding item:', e);
+            } catch {
+                console.error('[Item-ADD] Error while adding item');
                 return Promise.reject();
             }
         }
@@ -233,21 +235,19 @@ export class ListService {
 
 
     async deleteList(name: string, token: string): Promise<void> {
-
+        const usr = await this.getUserForToken(token);
+        const list = await this.getListForName(name, usr.user_id);
         try {
-            const usr = await this.getUserForToken(token);
-            console.log('[Lists-DEL] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
-            if (usr.user_id) {
-                const result = await getConnection()
-                    .createQueryBuilder()
-                    .delete()
-                    .from(Lists)
-                    .where("name = :name && fk_user = :user", {name: name, user: usr.user_id})
-                    .execute();
-                return Promise.resolve();
-
-            }
-        } catch (e) {
+            await getConnection()
+                .createQueryBuilder()
+                .delete()
+                .from(Lists)
+                .where("id = :id && fk_user = :user", {id: list.id, user: usr.user_id})
+                .execute();
+            console.log('[List-DEL] Item \"' + name + '\" deleted successfully');
+            return Promise.resolve();
+        } catch {
+            console.log('[List-DEL] Could not rename List \"' + name + '\"');
             return Promise.reject();
         }
     }
@@ -280,7 +280,6 @@ export class ListService {
         } else {
             try {
                 const usr = await this.getUserForToken(token);
-                console.log('[Lists-ADD] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
                 if (usr.user_id) {
                     await getConnection()
                         .createQueryBuilder()
@@ -310,7 +309,7 @@ export class ListService {
     async getLists(token: string): Promise<string[]> {
         try {
             const usr = await this.getUserForToken(token);
-            console.log('[Lists-GET] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
+            console.log('[List-GET] Recieved: \"' + token + '\" resolved for ID \"' + usr.user_id + '\"');
             if (usr.user_id) {
                 return await this.connection
                     .getRepository(Lists)
@@ -328,7 +327,7 @@ export class ListService {
                 return Promise.reject();
             }
         } catch (e) {
-            console.log('[Lists-GET] Error while getting Lists');
+            console.log('[List-GET] Error while getting Lists');
             return Promise.reject('Error while getting Lists: ' + e);
         }
     }
@@ -386,8 +385,8 @@ export class ListService {
         });
     }
 
-    register(email: string, username: string, password: string, repeatPassword: string): Promise<Answer> {
-        return new Promise((res, rej) => {
+    async register(email: string, username: string, password: string, repeatPassword: string): Promise<Answer> {
+        return new Promise((resolve, reject) => {
             let answer: Answer = new Answer();
             console.log('[Register] Registration recieved:', email, username, password, repeatPassword);
 
@@ -408,54 +407,52 @@ export class ListService {
             if (answer.validation.password === null) {
                 answer.code = 202;
                 answer.validation.password = true;
-                res(answer);
+                resolve(answer);
             }
 
             if (answer.validation.email == true && answer.validation.username == true && answer.validation.password == true) {
 
-                const dbUser: Promise<User> =
-                    this.connection
-                        .getRepository(User)
-                        .createQueryBuilder("mail")
-                        .where("mail.email = :email", {email: email})
-                        .getOne();
-
-                dbUser.then((usr) => {
+                this.connection
+                    .getRepository(User)
+                    .createQueryBuilder("mail")
+                    .where("mail.email = :email", {email: email})
+                    .getOne().then((usr) => {
                     if (email === usr.email) {
                         console.log('[Register]', email, 'already registered');
                         answer.code = 201;
-                        res(answer);
+                        resolve(answer);
+                    } else {
+                        console.log("[Register] Email not yet registered:", email);
+                        try {
+                            getConnection()
+                                .createQueryBuilder()
+                                .insert()
+                                .into(User)
+                                .values([
+                                    {
+                                        email: email,
+                                        username: username,
+                                        password: password,
+                                        current_token: this.tokenGenerator()
+                                    }
+                                ])
+                                .execute();
+
+                            answer.token = this.tokenGenerator();
+
+                            console.log('[Register] Register for', email, 'completed successfully');
+                            resolve(answer);
+                        } catch {
+                            console.error('[Register] Error while inserting data to database');
+                            answer.code = 1;
+                            reject(answer);
+                        }
                     }
                 }).catch(() => {
-                    console.log("[Register] Email not yet registered:", email);
-                    try {
-
-                        getConnection()
-                            .createQueryBuilder()
-                            .insert()
-                            .into(User)
-                            .values([
-                                {
-                                    email: email,
-                                    username: username,
-                                    password: password,
-                                    current_token: this.tokenGenerator()
-                                }
-                            ])
-                            .execute();
-
-                        answer.token = this.tokenGenerator();
-
-                        console.log('[Register] Register for', email, 'completed successfully');
-                        res(answer);
-                    } catch {
-                        console.error('[Register] Error while inserting data to database');
-                        answer.code = 1;
-                        rej(answer);
-                    }
+                    console.error()
                 });
             } else {
-                res(answer);
+                resolve(answer);
             }
         });
     }
