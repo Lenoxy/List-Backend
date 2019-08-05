@@ -6,7 +6,7 @@ import {CorsOptions} from "@nestjs/common/interfaces/external/cors-options.inter
 async function bootstrap() {
     //Origin has to be changed manually for PROD build to: https://list.lenoxy.net or: http://localhost:4200
     const corsOptions: CorsOptions = {
-        origin: 'http://localhost:4200'
+        origin: 'https://list.lenoxy.net'
     };
     const appOptions: NestApplicationOptions = {
         cors: corsOptions
