@@ -413,12 +413,12 @@ export class ListService {
 
                 dbUser.then((usr) => {
                     if (email === usr.email) {
-                        console.log('[Register]', email, 'already registered');
+                        console.log('[Register] \"' + email + '\" already registered');
                         answer.code = 201;
                         resolve(answer);
                     }
                 }).catch(() => {
-                    console.log("[Register] Email not yet registered:", email);
+                    console.log('[Register] Email not yet registered: \"' + email + '\"');
                     try {
                         const token = this.tokenGenerator();
                         getConnection()
@@ -441,12 +441,12 @@ export class ListService {
                         resolve(answer);
                     } catch {
                         console.error('[Register] Error while inserting data to database');
-                        answer.code = 1;
+                        answer.code = 2;
                         reject(answer);
                     }
                 });
             } else {
-                resolve(answer);
+                reject(answer);
             }
         });
     }
