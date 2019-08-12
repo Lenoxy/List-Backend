@@ -303,11 +303,12 @@ export class ListService {
 
     async getLists(token: string): Promise<string[]> {
         try {
-            return await this.getUserForToken(token).then((usr) => {
+            const user = await this.getUserForToken(token);
+            if (user.user_id) {
                 return this.connection
                     .getRepository(Lists)
                     .createQueryBuilder()
-                    .where("fk_user = :givenId", {givenId: usr.user_id})
+                    .where("fk_user = :givenId", {givenId: user.user_id})
                     .getMany()
                     .then((listsObjFromDB) => {
                         const nameList: string[] = [];
@@ -315,11 +316,12 @@ export class ListService {
                             nameList.push(x.name);
                         });
                         console.log('[List-GET] Returned \"' + listsObjFromDB.length + '\" lists sucessfully');
-                        return nameList;
+                        return Promise.resolve(nameList);
                     });
-            });
-
-
+            } else {
+                console.log('[List-GET] Couldnt get User for Token');
+                Promise.reject('Couldnt get User for Token');
+            }
         } catch (e) {
             console.error('[List-GET] Error while getting Lists:', e);
             return Promise.reject('Error while getting Lists');
