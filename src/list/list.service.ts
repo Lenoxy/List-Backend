@@ -318,8 +318,8 @@ export class ListService {
                     return nameList;
                 });
 
-        } catch {
-            console.log('[List-GET] Error while getting Lists');
+        } catch (e) {
+            console.error('[List-GET] Error while getting Lists:', e);
             return Promise.reject('Error while getting Lists');
         }
     }
