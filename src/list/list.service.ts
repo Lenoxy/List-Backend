@@ -303,20 +303,22 @@ export class ListService {
 
     async getLists(token: string): Promise<string[]> {
         try {
-            const usr = await this.getUserForToken(token);
-            return await this.connection
-                .getRepository(Lists)
-                .createQueryBuilder()
-                .where("fk_user = :givenId", {givenId: usr.user_id})
-                .getMany()
-                .then((listsObjFromDB) => {
-                    const nameList: string[] = [];
-                    listsObjFromDB.forEach((x) => {
-                        nameList.push(x.name);
+            return await this.getUserForToken(token).then((usr) => {
+                return this.connection
+                    .getRepository(Lists)
+                    .createQueryBuilder()
+                    .where("fk_user = :givenId", {givenId: usr.user_id})
+                    .getMany()
+                    .then((listsObjFromDB) => {
+                        const nameList: string[] = [];
+                        listsObjFromDB.forEach((x) => {
+                            nameList.push(x.name);
+                        });
+                        console.log('[List-GET] Returned \"' + listsObjFromDB.length + '\" lists sucessfully');
+                        return nameList;
                     });
-                    console.log('[List-GET] Returned \"' + listsObjFromDB.length + '\" lists sucessfully');
-                    return nameList;
-                });
+            });
+
 
         } catch (e) {
             console.error('[List-GET] Error while getting Lists:', e);
